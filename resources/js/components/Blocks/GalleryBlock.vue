@@ -97,6 +97,11 @@
           </div>
         </div>
       </div>
+
+      <!-- Área para componentes aninhados -->
+      <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -141,6 +146,31 @@ const props = defineProps({
   isEditable: {
     type: Boolean,
     default: false
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 

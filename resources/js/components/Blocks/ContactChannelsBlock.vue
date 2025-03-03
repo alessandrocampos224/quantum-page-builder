@@ -83,6 +83,11 @@
           </div>
         </div>
       </div>
+      
+      <!-- Área para componentes aninhados -->
+      <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -97,13 +102,18 @@ import {
   Clock,
   MapPin,
   Globe,
-  MessageSquare
+  MessageSquare,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Twitter,
+  Youtube
 } from 'lucide-vue-next'
 
 const props = defineProps({
   title: {
     type: String,
-    default: ''
+    default: 'Entre em contato'
   },
   channels: {
     type: Array,
@@ -160,7 +170,7 @@ const props = defineProps({
   },
   borderRadius: {
     type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'full'
+    default: 'md' // 'none', 'sm', 'md', 'lg', 'full'
   },
   // Espaçamento
   paddingY: {
@@ -170,6 +180,31 @@ const props = defineProps({
   paddingX: {
     type: String,
     default: '4' // '4', '8', '12', '16', '20'
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 
@@ -189,7 +224,12 @@ const getIconComponent = (iconName) => {
     'Clock': Clock,
     'MapPin': MapPin,
     'Globe': Globe,
-    'MessageSquare': MessageSquare
+    'MessageSquare': MessageSquare,
+    'Instagram': Instagram,
+    'Facebook': Facebook,
+    'Linkedin': Linkedin,
+    'Twitter': Twitter,
+    'Youtube': Youtube
   }
   return icons[iconName] || Users
 }

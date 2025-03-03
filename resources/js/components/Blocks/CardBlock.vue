@@ -32,7 +32,7 @@
       containerWidth === 'full' ? '' : 'container mx-auto',
       containerWidth === 'narrow' ? 'max-w-4xl' : ''
     ]">
-      <div v-if="title || subtitle" class="mb-8">
+      <div v-if="displayTitle || displaySubtitle" class="mb-8">
         <h2 :class="[
           'text-' + titleSize,
           'font-' + titleWeight,
@@ -40,10 +40,10 @@
           titleFont,
           'leading-tight'
         ]">
-          {{ title }}
+          {{ displayTitle }}
         </h2>
         <p 
-          v-if="subtitle"
+          v-if="displaySubtitle"
           :class="[
             'mt-4',
             'text-' + subtitleSize,
@@ -52,7 +52,7 @@
             subtitleFont
           ]"
         >
-          {{ subtitle }}
+          {{ displaySubtitle }}
         </p>
       </div>
 
@@ -70,7 +70,7 @@
           'grid-cols-1': columns === 1
         }
       ]">
-        <div v-for="(card, index) in safeCards" :key="index" 
+        <div v-for="(card, index) in displayCards" :key="index" 
           class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300 ease-in-out"
         >
           <div class="p-6">
@@ -104,11 +104,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Área para componentes aninhados -->
+    <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+      <slot></slot>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import axios from 'axios'
 import {
   FileText,
   Users,
@@ -121,6 +127,15 @@ import {
 } from 'lucide-vue-next'
 
 const props = defineProps({
+  // Fonte de dados
+  dataSource: {
+    type: String,
+    default: 'static' // 'static', 'dynamic'
+  },
+  contentLink: {
+    type: Object,
+    default: null
+  },
   // Container
   containerWidth: {
     type: String,
@@ -228,12 +243,116 @@ const props = defineProps({
   spacing: {
     type: String,
     default: 'normal' // 'compact', 'normal', 'relaxed'
+  },
+  // Novas propriedades para o sistema de colunas e aninhamento
+  columnSpan: {
+    type: [Number, String],
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  // Novas propriedades para listagens dinâmicas
+  contentType: {
+    type: String,
+    default: 'single'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: [String, Number],
+    default: 'all'
+  },
+  postsLimit: {
+    type: [Number, String],
+    default: 6
   }
 })
 
-// Computed property para garantir que cards seja sempre um array
-const safeCards = computed(() => {
+// Estado para armazenar posts carregados dinamicamente
+const dynamicPosts = ref([])
+const loading = ref(false)
+
+// Título dinâmico ou estático
+const displayTitle = computed(() => {
+  if (props.dataSource === 'dynamic' && props.contentLink?.data) {
+    return props.contentLink.data.name
+  }
+  return props.title
+})
+
+// Subtítulo dinâmico ou estático
+const displaySubtitle = computed(() => {
+  if (props.dataSource === 'dynamic' && props.contentLink?.data) {
+    return props.contentLink.data.description || ''
+  }
+  return props.subtitle
+})
+
+// Cards dinâmicos ou estáticos
+const displayCards = computed(() => {
+  if (props.dataSource === 'dynamic' && props.contentLink?.type === 'category') {
+    return dynamicPosts.value.map(post => ({
+      title: post.name,
+      description: post.description || 'Sem descrição',
+      icon: 'document',
+      link: {
+        text: 'Ver mais',
+        url: `/posts/${post.id}`
+      }
+    }))
+  } else if (props.dataSource === 'dynamic' && props.contentLink?.type === 'post') {
+    // Se for um post único, criamos um card para ele
+    const post = props.contentLink.data
+    return [{
+      title: post.name,
+      description: post.description || 'Sem descrição',
+      icon: 'document',
+      link: {
+        text: 'Ver mais',
+        url: `/posts/${post.id}`
+      }
+    }]
+  }
+  
+  // Caso contrário, retorna os cards estáticos
   return Array.isArray(props.cards) ? props.cards : []
+})
+
+// Carregar posts de uma categoria
+const loadPostsFromCategory = async (categoryId) => {
+  if (!categoryId) return
+  
+  loading.value = true
+  try {
+    const response = await axios.get(`/api/page-builder/categories/${categoryId}/posts`)
+    if (response.data.success) {
+      dynamicPosts.value = response.data.data
+    } else {
+      console.error('Erro ao carregar posts da categoria:', response.data.message)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar posts da categoria:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Observar mudanças no contentLink
+watch(() => props.contentLink, (newValue) => {
+  if (props.dataSource === 'dynamic' && newValue?.type === 'category') {
+    loadPostsFromCategory(newValue.id)
+  }
+}, { deep: true })
+
+// Carregar dados iniciais se necessário
+onMounted(() => {
+  if (props.dataSource === 'dynamic' && props.contentLink?.type === 'category') {
+    loadPostsFromCategory(props.contentLink.id)
+  }
 })
 
 const getIconComponent = (iconName) => {
@@ -249,76 +368,13 @@ const getIconComponent = (iconName) => {
     'clock': Clock,
     'chat': MessageSquare
   }
+  
   return icons[iconName] || FileText
 }
 </script>
 
 <style scoped>
 .card-block {
-  @apply py-12;
-}
-
-/* Estilos */
-.style-default {
-  @apply bg-gray-50 dark:bg-gray-900;
-}
-
-.style-highlighted {
-  @apply bg-white dark:bg-gray-800;
-}
-
-.style-bordered {
-  @apply border border-gray-200 dark:border-gray-700 rounded-lg;
-}
-
-/* Layouts */
-.layout-default {
   @apply w-full;
-}
-
-.layout-centered {
-  @apply text-center;
-}
-
-.layout-narrow {
-  @apply max-w-4xl mx-auto;
-}
-
-.layout-wide {
-  @apply max-w-7xl mx-auto;
-}
-
-/* Espaçamentos Verticais */
-.spacing-v-default {
-  @apply py-12;
-}
-
-.spacing-v-compact {
-  @apply py-8;
-}
-
-.spacing-v-comfortable {
-  @apply py-16;
-}
-
-.spacing-v-spacious {
-  @apply py-20;
-}
-
-/* Espaçamentos Horizontais */
-.spacing-h-default {
-  @apply px-4 sm:px-6 lg:px-8;
-}
-
-.spacing-h-compact {
-  @apply px-4;
-}
-
-.spacing-h-comfortable {
-  @apply px-6 sm:px-8 lg:px-10;
-}
-
-.spacing-h-spacious {
-  @apply px-8 sm:px-10 lg:px-12;
 }
 </style> 

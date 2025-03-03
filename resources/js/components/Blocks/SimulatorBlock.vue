@@ -104,14 +104,19 @@
           </div>
           
           <div class="flex justify-center">
-            <button
-              type="submit"
-              class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-tenant-primary hover:bg-tenant-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tenant-primary"
+            <button 
+              type="submit" 
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {{ submitButtonText }}
+              {{ submitButtonText || 'Simular' }}
             </button>
           </div>
         </form>
+      </div>
+      
+      <!-- Área para componentes aninhados -->
+      <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <slot></slot>
       </div>
     </div>
   </div>
@@ -120,18 +125,39 @@
 <script setup>
 import { ref } from 'vue'
 
-const props = defineProps({
+defineProps({
   title: {
     type: String,
-    default: ''
+    default: 'Simulador'
   },
   description: {
     type: String,
-    default: ''
+    default: 'Preencha os campos abaixo para realizar uma simulação.'
   },
   fields: {
     type: Array,
-    default: () => []
+    default: () => [
+      { 
+        type: 'number', 
+        name: 'value', 
+        label: 'Valor', 
+        required: true,
+        placeholder: 'Digite o valor'
+      },
+      { 
+        type: 'select', 
+        name: 'period', 
+        label: 'Período', 
+        required: true,
+        options: [
+          { value: '12', label: '12 meses' },
+          { value: '24', label: '24 meses' },
+          { value: '36', label: '36 meses' },
+          { value: '48', label: '48 meses' },
+          { value: '60', label: '60 meses' }
+        ]
+      }
+    ]
   },
   submitButtonText: {
     type: String,
@@ -178,7 +204,7 @@ const props = defineProps({
   },
   borderRadius: {
     type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'full'
+    default: 'md' // 'none', 'sm', 'md', 'lg', 'full'
   },
   // Espaçamento
   paddingY: {
@@ -188,6 +214,31 @@ const props = defineProps({
   paddingX: {
     type: String,
     default: '4' // '4', '8', '12', '16', '20'
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 

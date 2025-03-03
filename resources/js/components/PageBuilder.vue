@@ -98,17 +98,18 @@
               v-model="pageComponents"
               v-bind="dropOptions"
               item-key="id"
+              @add="handleMainDragAdd"
               :class="[
-                  'min-h-[500px] bg-white dark:bg-gray-800 p-12 rounded-lg',
+                  'min-h-[500px] bg-white dark:bg-gray-800 p-12 rounded-lg grid grid-cols-12 gap-4',
                   {
-                      'space-y-8': globalStyles.spacing === 'compact',
-                      'space-y-16': globalStyles.spacing === 'normal',
-                      'space-y-24': globalStyles.spacing === 'relaxed'
+                      'gap-y-8': globalStyles.spacing === 'compact',
+                      'gap-y-16': globalStyles.spacing === 'normal',
+                      'gap-y-24': globalStyles.spacing === 'relaxed'
                   }
               ]"
             >
               <template #header v-if="!pageComponents.length">
-                <div class="flex flex-col items-center justify-center min-h-[500px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
+                <div class="flex flex-col items-center justify-center min-h-[500px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 col-span-12">
                   <FilePlus class="w-12 h-12 text-gray-400 mb-4" />
                   <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Comece a construir sua página</h3>
                   <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">Arraste e solte os componentes da barra lateral para começar a criar sua página.</p>
@@ -116,7 +117,12 @@
               </template>
               
               <template #item="{ element }">
-                <div class="relative group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+                <div 
+                  :class="[
+                    'relative group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200',
+                    `col-span-${element.props?.columnSpan || 12}`
+                  ]"
+                >
                   <!-- Barra de ações do componente -->
                   <div class="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1 z-50">
                     <button 
@@ -173,6 +179,66 @@
                       v-bind="element.props || getDefaultProps(element.type)"
                       class="w-full"
                     />
+                  </div>
+  
+                  <!-- Área para componentes aninhados -->
+                  <div v-if="element.props?.allowNesting" class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Componentes Aninhados</h4>
+                    
+                    <draggable
+                      v-model="element.children"
+                      v-bind="nestedDropOptions"
+                      item-key="id"
+                      @add="(event) => handleNestedDragAdd(element, event)"
+                      class="min-h-[100px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4 grid grid-cols-12 gap-4"
+                    >
+                      <template #header v-if="!element.children || !element.children.length">
+                        <div class="flex flex-col items-center justify-center min-h-[100px] col-span-12">
+                          <p class="text-sm text-gray-500 dark:text-gray-400 text-center">Arraste componentes para esta área</p>
+                        </div>
+                      </template>
+                      
+                      <template #item="{ element: childElement }">
+                        <div 
+                          :class="[
+                            'relative group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200',
+                            `col-span-${childElement.props?.columnSpan || 12}`
+                          ]"
+                        >
+                          <!-- Barra de ações do componente aninhado -->
+                          <div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1 z-50">
+                            <button
+                              type="button"
+                              @click="editNestedComponent(element, childElement)"
+                              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                            >
+                              <Pencil class="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              @click="removeNestedComponent(element, childElement)"
+                              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-red-500"
+                            >
+                              <Trash class="w-3 h-3" />
+                            </button>
+                          </div>
+                          
+                          <!-- Indicador de tipo de componente -->
+                          <div class="absolute left-2 top-2 bg-gray-100 dark:bg-gray-700 text-xs px-2 py-1 rounded">
+                            {{ childElement.type }}
+                          </div>
+                          
+                          <!-- Renderização do componente aninhado -->
+                          <div class="p-4 pt-8">
+                            <component
+                              :is="getComponentByType(childElement.type)"
+                              v-bind="childElement.props || getDefaultProps(childElement.type)"
+                              class="w-full"
+                            />
+                          </div>
+                        </div>
+                      </template>
+                    </draggable>
                   </div>
                 </div>
               </template>
@@ -266,6 +332,27 @@
               spacing: 'normal',
               contentWidth: 'contained'
           })
+      },
+      // Props adicionais para compatibilidade
+      breadcrumbs: {
+          type: Array,
+          default: () => []
+      },
+      sections: {
+          type: Array,
+          default: () => []
+      },
+      record: {
+          type: Object,
+          default: () => ({})
+      },
+      config: {
+          type: Object,
+          default: () => ({})
+      },
+      actions: {
+          type: Array,
+          default: () => []
       }
   })
   
@@ -273,8 +360,12 @@
   const emit = defineEmits(['update:modelValue', 'update:globalStylesValue'])
   
   // Estado da página
-  const pageComponents = ref(JSON.parse(JSON.stringify(props.modelValue || [])))
+  // Se modelValue estiver vazio mas sections não, use sections
+  const pageComponents = ref(JSON.parse(JSON.stringify(
+      props.modelValue?.length ? props.modelValue : props.sections || []
+  )))
   const selectedComponent = ref(null)
+  const parentComponent = ref(null)
   const drawerOpen = ref(false)
   const globalStyles = ref(JSON.parse(JSON.stringify(props.globalStylesValue || {
       theme: 'light',
@@ -708,7 +799,7 @@
   ])
   
   // Métodos
-  const cloneComponent = (component) => {
+  const cloneComponent = (component, isNested = false) => {
       console.log('PageBuilder - Clonando componente:', component);
       
       // Cria uma cópia profunda dos defaultProps
@@ -720,11 +811,16 @@
       props.spacingVertical = props.spacingVertical || 'default';
       props.spacingHorizontal = props.spacingHorizontal || 'default';
       
+      // Define o columnSpan padrão com base se é um componente aninhado ou não
+      props.columnSpan = isNested ? 6 : 6;
+      props.allowNesting = props.allowNesting || false;
+      
       // Retorna um novo componente com os props mapeados
       const newComponent = {
           id: uuidv4(),
           type: component.type,
-          props: props
+          props: props,
+          children: []
       };
       
       console.log('PageBuilder - Novo componente criado:', newComponent);
@@ -758,6 +854,7 @@
   const editComponent = (component) => {
     console.log('Editando componente:', component)
     selectedComponent.value = component
+    parentComponent.value = null
     drawerOpen.value = true
     
     // Força a atualização do DOM para garantir que o Drawer seja exibido corretamente
@@ -769,6 +866,7 @@
   const closeDrawer = () => {
     drawerOpen.value = false
     selectedComponent.value = null
+    parentComponent.value = null
     
     // Remove a classe overflow-hidden do body quando o Drawer é fechado
     nextTick(() => {
@@ -794,7 +892,8 @@
     const newComponent = {
       id: uuidv4(),
       type: component.type,
-      props: props
+      props: props,
+      children: []
     }
     const index = pageComponents.value.findIndex(c => c.id === component.id)
     pageComponents.value.splice(index + 1, 0, newComponent)
@@ -821,16 +920,32 @@
     return pageComponents.value[pageComponents.value.length - 1]?.id === component.id
   }
   
-  const updateComponentSettings = (componentId, newSettings) => {
+  const updateComponentSettings = (componentId, newSettings, parentComponentId = null) => {
     console.log('PageBuilder - Atualizando configurações do componente:', {
       componentId,
-      newSettings
+      newSettings,
+      parentComponentId
     })
-    const component = pageComponents.value.find(c => c.id === componentId)
-    if (component) {
-      console.log('PageBuilder - Componente encontrado:', component)
-      component.props = { ...component.props, ...newSettings }
-      console.log('PageBuilder - Componente atualizado:', component)
+    
+    // Se tiver um componente pai, atualiza o componente aninhado
+    if (parentComponentId) {
+      const parentComponent = pageComponents.value.find(c => c.id === parentComponentId)
+      if (parentComponent && parentComponent.children) {
+        const childComponent = parentComponent.children.find(c => c.id === componentId)
+        if (childComponent) {
+          console.log('PageBuilder - Componente aninhado encontrado:', childComponent)
+          childComponent.props = { ...childComponent.props, ...newSettings }
+          console.log('PageBuilder - Componente aninhado atualizado:', childComponent)
+        }
+      }
+    } else {
+      // Atualiza o componente principal
+      const component = pageComponents.value.find(c => c.id === componentId)
+      if (component) {
+        console.log('PageBuilder - Componente encontrado:', component)
+        component.props = { ...component.props, ...newSettings }
+        console.log('PageBuilder - Componente atualizado:', component)
+      }
     }
   }
   
@@ -880,47 +995,92 @@
   
   const getDefaultProps = (type) => {
     const component = availableComponents.value.find(c => c.type === type)
-    return component ? component.defaultProps : {}
-  }
-  
-  // Configurações do draggable
-  const dragOptions = {
-    animation: 200,
-    group: {
-      name: "available",
-      pull: "clone",
-      put: false,
-      revertClone: true
-    },
-    sort: false,
-    disabled: false,
-    ghostClass: "ghost",
-    onStart: (evt) => {
-      console.log('Início do drag (source):', evt)
-    },
-    onEnd: (evt) => {
-      console.log('Fim do drag (source):', evt)
-    },
-    onClone: (evt) => {
-      console.log('Clone criado:', evt)
+    const defaultProps = component ? component.defaultProps : {}
+    
+    // Adicionar propriedades padrão para o sistema de colunas e aninhamento
+    return {
+      ...defaultProps,
+      columnSpan: 6,
+      allowNesting: false,
+      children: []
     }
   }
   
-  const dropOptions = {
+  // Configurações do draggable
+  const dragOptions = computed(() => ({
     animation: 200,
-    group: {
-      name: "page",
-      put: ["available"]
-    },
-    sort: true,
+    group: { name: 'components', pull: 'clone', put: false },
     disabled: false,
-    ghostClass: "ghost",
-    onAdd: (evt) => {
-      console.log('Componente adicionado ao drop:', evt)
-    },
-    onMove: (evt) => {
-      console.log('Movimento no drop:', evt)
-      return true
+    ghostClass: 'ghost'
+  }))
+  
+  const dropOptions = computed(() => ({
+    animation: 200,
+    group: { name: 'components', put: true },
+    disabled: false,
+    ghostClass: 'ghost'
+  }))
+  
+  const nestedDropOptions = computed(() => ({
+    animation: 200,
+    group: { name: 'components', put: true },
+    disabled: false,
+    ghostClass: 'ghost'
+  }))
+  
+  const editNestedComponent = (parent, child) => {
+    selectedComponent.value = child
+    parentComponent.value = parent
+    drawerOpen.value = true
+  }
+  
+  const removeNestedComponent = (parent, child) => {
+    if (!parent.children) return
+    
+    const index = parent.children.findIndex(c => c.id === child.id)
+    if (index !== -1) {
+      parent.children.splice(index, 1)
+    }
+  }
+  
+  // Manipuladores de eventos para draggable
+  const handleMainDragAdd = (event) => {
+    console.log('Componente adicionado ao container principal:', event);
+    // Garantir que o componente adicionado tenha a propriedade children
+    const addedComponent = pageComponents.value[event.newIndex];
+    if (addedComponent) {
+      if (!addedComponent.children) {
+        addedComponent.children = [];
+      }
+      if (!addedComponent.props) {
+        addedComponent.props = getDefaultProps(addedComponent.type);
+      }
+      // Garantir que o columnSpan seja definido
+      if (!addedComponent.props.columnSpan) {
+        addedComponent.props.columnSpan = 6;
+      }
+    }
+  }
+  
+  const handleNestedDragAdd = (parentComponent, event) => {
+    console.log('Componente adicionado a um container aninhado:', event);
+    // Garantir que o componente aninhado tenha as propriedades necessárias
+    if (parentComponent && parentComponent.children) {
+      const addedComponent = parentComponent.children[event.newIndex];
+      if (addedComponent) {
+        if (!addedComponent.props) {
+          // Usar o parâmetro isNested=true para definir columnSpan=6 por padrão
+          const componentType = addedComponent.type;
+          const componentTemplate = availableComponents.value.find(c => c.type === componentType);
+          if (componentTemplate) {
+            addedComponent.props = cloneComponent(componentTemplate, true).props;
+          } else {
+            addedComponent.props = getDefaultProps(addedComponent.type);
+            // Garantir que o columnSpan seja definido (padrão para 6 colunas - metade da largura)
+            addedComponent.props.columnSpan = 6;
+          }
+        }
+      }
     }
   }
   </script>
@@ -962,5 +1122,11 @@
 
   :deep(.select-options) {
     z-index: 60 !important;
+  }
+
+  /* Ajustes para o grid */
+  :deep(.grid) {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
   }
   </style> 

@@ -117,15 +117,20 @@
           </div>
           
           <div class="flex justify-center">
-            <button
-              type="submit"
-              class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            <button 
+              type="submit" 
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {{ submitButtonText }}
+              {{ submitButtonText || 'Enviar' }}
             </button>
           </div>
         </form>
       </div>
+    </div>
+
+    <!-- Área para componentes aninhados -->
+    <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+      <slot></slot>
     </div>
   </div>
 </template>
@@ -136,43 +141,58 @@ import { ref } from 'vue'
 const props = defineProps({
   title: {
     type: String,
-    default: ''
+    default: 'Entre em contato'
   },
   description: {
     type: String,
-    default: ''
+    default: 'Preencha o formulário abaixo para entrar em contato conosco.'
   },
   fields: {
     type: Array,
-    default: () => []
+    default: () => [
+      { 
+        type: 'text', 
+        name: 'name', 
+        label: 'Nome', 
+        required: true,
+        placeholder: 'Seu nome completo'
+      },
+      { 
+        type: 'email', 
+        name: 'email', 
+        label: 'Email', 
+        required: true,
+        placeholder: 'seu@email.com'
+      },
+      { 
+        type: 'textarea', 
+        name: 'message', 
+        label: 'Mensagem', 
+        required: true,
+        placeholder: 'Digite sua mensagem aqui...'
+      }
+    ]
   },
   submitButtonText: {
     type: String,
     default: 'Enviar'
   },
-  // Opções de Container
+  successMessage: {
+    type: String,
+    default: 'Mensagem enviada com sucesso!'
+  },
+  errorMessage: {
+    type: String,
+    default: 'Ocorreu um erro ao enviar a mensagem. Tente novamente.'
+  },
   containerWidth: {
     type: String,
-    default: 'default' // 'default', 'full', 'narrow'
+    default: 'default' // 'default', 'narrow', 'full'
   },
-  textAlignment: {
-    type: String,
-    default: 'left' // 'left', 'center', 'right'
-  },
-  // Background
   backgroundColor: {
     type: String,
-    default: 'white' // 'white', 'gray-50', 'gray-100', etc
+    default: 'white' // 'white', 'gray-50', 'gray-100', etc.
   },
-  backgroundImage: {
-    type: String,
-    default: ''
-  },
-  overlayOpacity: {
-    type: Number,
-    default: 0 // 0 a 1
-  },
-  // Bordas e Sombras
   shadow: {
     type: String,
     default: 'none' // 'none', 'sm', 'md', 'lg', 'xl'
@@ -187,13 +207,24 @@ const props = defineProps({
   },
   borderColor: {
     type: String,
-    default: 'gray-200'
+    default: 'gray-200' // 'gray-200', 'gray-300', etc.
   },
   borderRadius: {
     type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'full'
+    default: 'md' // 'none', 'sm', 'md', 'lg', 'xl', 'full'
   },
-  // Espaçamento
+  backgroundImage: {
+    type: String,
+    default: ''
+  },
+  overlayOpacity: {
+    type: String,
+    default: ''
+  },
+  textAlignment: {
+    type: String,
+    default: 'left' // 'left', 'center', 'right'
+  },
   paddingY: {
     type: String,
     default: '12' // '4', '8', '12', '16', '20'
@@ -201,6 +232,31 @@ const props = defineProps({
   paddingX: {
     type: String,
     default: '4' // '4', '8', '12', '16', '20'
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 

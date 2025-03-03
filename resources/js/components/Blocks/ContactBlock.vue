@@ -66,6 +66,11 @@
           </div>
         </div>
       </div>
+      
+      <!-- Área para componentes aninhados -->
+      <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -84,15 +89,36 @@ import {
 const props = defineProps({
   title: {
     type: String,
-    default: ''
+    default: 'Entre em contato'
   },
   subtitle: {
     type: String,
-    default: ''
+    default: 'Estamos disponíveis através dos seguintes canais'
   },
   channels: {
     type: Array,
-    default: () => []
+    default: () => [
+      {
+        icon: 'phone',
+        title: 'Telefone',
+        description: 'Estamos disponíveis para atendimento telefônico em horário comercial.',
+        phone: '(11) 1234-5678',
+        whatsapp: '(11) 98765-4321'
+      },
+      {
+        icon: 'email',
+        title: 'Email',
+        description: 'Envie-nos um email e responderemos o mais breve possível.',
+        email: 'contato@empresa.com'
+      },
+      {
+        icon: 'location',
+        title: 'Endereço',
+        description: 'Visite nossa sede para um atendimento presencial.',
+        address: 'Av. Paulista, 1000 - São Paulo, SP',
+        schedule: 'Segunda a Sexta, 9h às 18h'
+      }
+    ]
   },
   columns: {
     type: Number,
@@ -105,6 +131,31 @@ const props = defineProps({
   layout: {
     type: String,
     default: 'default'
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 

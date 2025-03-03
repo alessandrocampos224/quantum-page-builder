@@ -34,8 +34,13 @@
     ]">
       <div class="prose dark:prose-invert max-w-none">
         <div v-if="useMarkdown" v-html="renderedContent"></div>
-        <div v-else class="whitespace-pre-wrap">{{ content }}</div>
+        <div v-else class="whitespace-pre-wrap">{{ displayContent }}</div>
       </div>
+    </div>
+
+    <!-- Área para componentes aninhados -->
+    <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+      <slot></slot>
     </div>
   </div>
 </template>
@@ -52,6 +57,15 @@ const props = defineProps({
   useMarkdown: {
     type: Boolean,
     default: true
+  },
+  // Fonte de dados
+  dataSource: {
+    type: String,
+    default: 'static' // 'static', 'dynamic'
+  },
+  contentLink: {
+    type: Object,
+    default: null
   },
   // Opções de Container
   containerWidth: {
@@ -104,12 +118,47 @@ const props = defineProps({
   paddingX: {
     type: String,
     default: '4' // '4', '8', '12', '16', '20'
+  },
+  // Novas propriedades para o sistema de colunas e aninhamento
+  columnSpan: {
+    type: [Number, String],
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  // Novas propriedades para listagens dinâmicas
+  contentType: {
+    type: String,
+    default: 'single'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: [String, Number],
+    default: 'all'
+  },
+  postsLimit: {
+    type: [Number, String],
+    default: 6
   }
 })
 
+// Conteúdo dinâmico ou estático
+const displayContent = computed(() => {
+  if (props.dataSource === 'dynamic' && props.contentLink?.data) {
+    return props.contentLink.data.description || ''
+  }
+  return props.content
+})
+
 const renderedContent = computed(() => {
-  if (!props.content) return ''
-  return marked(props.content)
+  const contentToRender = displayContent.value
+  if (!contentToRender) return ''
+  return marked(contentToRender)
 })
 </script>
 

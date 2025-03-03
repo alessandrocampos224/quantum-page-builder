@@ -43,6 +43,11 @@
           </a>
         </div>
       </div>
+      
+      <!-- Área para componentes aninhados -->
+      <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -51,7 +56,26 @@
 const props = defineProps({
   benefits: {
     type: Array,
-    default: () => []
+    default: () => [
+      {
+        icon: 'fas fa-rocket',
+        title: 'Rápido e Eficiente',
+        description: 'Nossos serviços são otimizados para oferecer a melhor performance possível.',
+        link: ''
+      },
+      {
+        icon: 'fas fa-shield-alt',
+        title: 'Seguro e Confiável',
+        description: 'Segurança em primeiro lugar, seus dados estão protegidos conosco.',
+        link: ''
+      },
+      {
+        icon: 'fas fa-headset',
+        title: 'Suporte 24/7',
+        description: 'Nossa equipe está sempre disponível para ajudar quando você precisar.',
+        link: ''
+      }
+    ]
   },
   // Opções de Container
   containerWidth: {
@@ -94,7 +118,7 @@ const props = defineProps({
   },
   borderRadius: {
     type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'full'
+    default: 'md' // 'none', 'sm', 'md', 'lg', 'full'
   },
   // Espaçamento
   paddingY: {
@@ -104,6 +128,31 @@ const props = defineProps({
   paddingX: {
     type: String,
     default: '4' // '4', '8', '12', '16', '20'
+  },
+  // Novas propriedades para suporte a colunas e aninhamento
+  columnSpan: {
+    type: Number,
+    default: 12
+  },
+  allowNesting: {
+    type: Boolean,
+    default: false
+  },
+  contentType: {
+    type: String,
+    default: 'static' // 'static', 'posts', 'categories'
+  },
+  selectedCategories: {
+    type: Array,
+    default: () => []
+  },
+  filterCategory: {
+    type: String,
+    default: ''
+  },
+  postsLimit: {
+    type: Number,
+    default: 3
   }
 })
 </script> 
