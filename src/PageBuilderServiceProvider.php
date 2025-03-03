@@ -2,9 +2,9 @@
 
 namespace Quantum\Page\Builder\PageBuilder;
 
+use Quantum\Page\Builder\PageBuilder\Commands\PageBuilderCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Quantum\Page\Builder\PageBuilder\Commands\PageBuilderCommand;
 
 class PageBuilderServiceProvider extends PackageServiceProvider
 {
