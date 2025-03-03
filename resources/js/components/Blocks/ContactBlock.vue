@@ -1,0 +1,153 @@
+<!-- ContactBlock.vue -->
+<template>
+  <div :class="[
+    'contact-block',
+    `style-${style}`,
+    `layout-${layout}`
+  ]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div v-if="title || subtitle" class="text-center mb-8">
+        <h2 v-if="title" class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          {{ title }}
+        </h2>
+        <p v-if="subtitle" class="mt-2 text-lg text-gray-600 dark:text-gray-400">
+          {{ subtitle }}
+        </p>
+      </div>
+
+      <div :class="[
+        'grid gap-6',
+        columns === 1 ? 'grid-cols-1' : '',
+        columns === 2 ? 'grid-cols-1 md:grid-cols-2' : '',
+        columns === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : '',
+        columns === 4 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : ''
+      ]">
+        <div v-for="(channel, index) in channels" :key="index" 
+          class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300 ease-in-out p-6"
+        >
+          <div class="flex items-center mb-4">
+            <component 
+              :is="getIconComponent(channel.icon)"
+              class="h-6 w-6 text-blue-600 dark:text-blue-400 mr-3"
+            />
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {{ channel.title }}
+            </h3>
+          </div>
+          
+          <p class="text-gray-600 dark:text-gray-400 mb-4">
+            {{ channel.description }}
+          </p>
+
+          <div class="space-y-3">
+            <div v-if="channel.address" class="flex items-start">
+              <MapPin class="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
+              <span class="text-gray-600 dark:text-gray-400">{{ channel.address }}</span>
+            </div>
+
+            <div v-if="channel.schedule" class="flex items-start">
+              <Clock class="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
+              <span class="text-gray-600 dark:text-gray-400">{{ channel.schedule }}</span>
+            </div>
+
+            <div v-if="channel.phone" class="flex items-start">
+              <Phone class="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
+              <a :href="'tel:' + channel.phone" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                {{ channel.phone }}
+              </a>
+            </div>
+
+            <div v-if="channel.email" class="flex items-start">
+              <Mail class="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
+              <a :href="'mailto:' + channel.email" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                {{ channel.email }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import {
+  MapPin,
+  Clock,
+  Phone,
+  Mail,
+  Users,
+  Calendar,
+  MessageSquare
+} from 'lucide-vue-next'
+
+const props = defineProps({
+  title: {
+    type: String,
+    default: ''
+  },
+  subtitle: {
+    type: String,
+    default: ''
+  },
+  channels: {
+    type: Array,
+    default: () => []
+  },
+  columns: {
+    type: Number,
+    default: 3
+  },
+  style: {
+    type: [String, Object],
+    default: () => ({}),
+  },
+  layout: {
+    type: String,
+    default: 'default'
+  }
+})
+
+const getIconComponent = (iconName) => {
+  const icons = {
+    'users': Users,
+    'calendar': Calendar,
+    'phone': Phone,
+    'email': Mail,
+    'location': MapPin,
+    'clock': Clock,
+    'chat': MessageSquare
+  }
+  return icons[iconName] || Users
+}
+</script>
+
+<style scoped>
+.contact-block {
+  @apply py-12;
+}
+
+.style-default {
+  @apply bg-gray-50 dark:bg-gray-800;
+}
+
+.style-white {
+  @apply bg-white dark:bg-gray-800;
+}
+
+.style-highlighted {
+  @apply bg-blue-50 dark:bg-blue-900;
+}
+
+.layout-default {
+  @apply w-full;
+}
+
+.layout-narrow {
+  @apply max-w-4xl mx-auto;
+}
+
+.layout-wide {
+  @apply max-w-7xl mx-auto;
+}
+</style> 

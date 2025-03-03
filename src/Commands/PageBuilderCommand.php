@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Quantum\Page\Builder\PageBuilder\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class PageBuilderCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'quantum-page-builder';
 
     public $description = 'My command';
 

@@ -1,0 +1,966 @@
+<!-- PageBuilder.vue -->
+<template>
+    <div class="page-builder w-full bg-white dark:bg-gray-800">
+      <!-- Barra de ferramentas -->
+      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 sticky top-0 z-50">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-medium">Construtor de Páginas</h3>
+          <div class="flex items-center space-x-2">
+            <button type="button"
+              @click="previewPage"
+              class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-800 focus:outline-none focus:border-gray-800 focus:ring focus:ring-gray-200 disabled:opacity-25 transition"
+            >
+              <Eye class="w-4 h-4 mr-2" />
+              Pré-visualizar
+            </button>
+          </div>
+        </div>
+      </div>
+  
+      <!-- Área de construção -->
+      <div class="flex min-h-screen bg-white dark:bg-gray-800">
+        <!-- Componentes disponíveis -->
+        <div class="w-64 flex-shrink-0 bg-gray-100 dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 overflow-y-auto sticky top-[73px] h-[calc(100vh-73px)]">
+          <div class="space-y-4">
+            <!-- Seção de componentes -->
+            <div>
+              <h4 class="text-sm font-medium mb-4 text-gray-900 dark:text-gray-100">Componentes</h4>
+              <draggable
+                :list="availableComponents"
+                v-bind="dragOptions"
+                :clone="cloneComponent"
+                item-key="type"
+                :sort="false"
+                class="space-y-2"
+              >
+                <template #item="{ element }">
+                  <div
+                    class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm cursor-move hover:shadow-md transition-all hover:scale-[1.02] border border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="flex items-center">
+                      <component :is="element.icon" class="w-5 h-5 mr-2 text-primary-500" />
+                      <span class="text-sm text-gray-900 dark:text-gray-100">{{ element.title }}</span>
+                    </div>
+                  </div>
+                </template>
+              </draggable>
+            </div>
+  
+            <!-- Seção de estilos globais -->
+            <div v-if="pageComponents.length > 0">
+              <h4 class="text-sm font-medium mb-4 text-gray-900 dark:text-gray-100">Estilos Globais</h4>
+              <div class="space-y-3">
+                <!-- Tema -->
+                <div>
+                  <label class="text-xs font-medium mb-1 block text-gray-900 dark:text-gray-100">Tema</label>
+                  <select v-model="globalStyles.theme" class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="light">Claro</option>
+                    <option value="dark">Escuro</option>
+                  </select>
+                </div>
+  
+                <!-- Espaçamento entre Componentes -->
+                <div>
+                  <label class="text-xs font-medium mb-1 block text-gray-900 dark:text-gray-100">Espaçamento entre Componentes</label>
+                  <select v-model="globalStyles.spacing" class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="compact">Compacto</option>
+                    <option value="normal">Normal</option>
+                    <option value="relaxed">Relaxado</option>
+                  </select>
+                </div>
+  
+                <!-- Largura do conteúdo -->
+                <div>
+                  <label class="text-xs font-medium mb-1 block text-gray-900 dark:text-gray-100">Largura do Conteúdo</label>
+                  <select v-model="globalStyles.contentWidth" class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="full">Largura Total</option>
+                    <option value="contained">Contido</option>
+                    <option value="narrow">Estreito</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Área principal de drop -->
+        <div class="flex-1 p-8 bg-gray-100 dark:bg-gray-900">
+          <div 
+            class="min-h-[500px] relative bg-white dark:bg-gray-800 rounded-lg shadow-sm w-full"
+            :class="{
+              'max-w-7xl mx-auto': globalStyles.contentWidth === 'contained',
+              'max-w-4xl mx-auto': globalStyles.contentWidth === 'narrow',
+              'w-full': globalStyles.contentWidth === 'full'
+            }"
+          >
+            <!-- Lista de componentes -->
+            <draggable
+              v-model="pageComponents"
+              v-bind="dropOptions"
+              item-key="id"
+              :class="[
+                  'min-h-[500px] bg-white dark:bg-gray-800 p-12 rounded-lg',
+                  {
+                      'space-y-8': globalStyles.spacing === 'compact',
+                      'space-y-16': globalStyles.spacing === 'normal',
+                      'space-y-24': globalStyles.spacing === 'relaxed'
+                  }
+              ]"
+            >
+              <template #header v-if="!pageComponents.length">
+                <div class="flex flex-col items-center justify-center min-h-[500px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
+                  <FilePlus class="w-12 h-12 text-gray-400 mb-4" />
+                  <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Comece a construir sua página</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">Arraste e solte os componentes da barra lateral para começar a criar sua página.</p>
+                </div>
+              </template>
+              
+              <template #item="{ element }">
+                <div class="relative group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+                  <!-- Barra de ações do componente -->
+                  <div class="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1 z-50">
+                    <button 
+                      type="button"
+                      @click="moveComponent(element, 'up')"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      :disabled="isFirstComponent(element)"
+                    >
+                      <ArrowUp class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="moveComponent(element, 'down')"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      :disabled="isLastComponent(element)"
+                    >
+                      <ArrowDown class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="duplicateComponent(element)"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <Copy class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="editComponent(element)"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <Pencil class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="removeComponent(element)"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-red-500 hover:text-red-600"
+                    >
+                      <Trash class="w-4 h-4" />
+                    </button>
+                  </div>
+  
+                  <!-- Container do componente -->
+                  <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-t-xl border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-2">
+                      <component :is="element.icon" class="w-5 h-5 text-primary-500" />
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ element.type === 'header' ? 'Cabeçalho' : element.type === 'content' ? 'Conteúdo' : element.type === 'benefits' ? 'Benefícios' : element.type === 'simulator' ? 'Simulador' : element.type === 'contact-channels' ? 'Canais de Atendimento' : element.type === 'cards' ? 'Cards' : 'Formulário' }}</span>
+                    </div>
+                  </div>
+  
+                  <!-- Renderização do componente -->
+                  <div class="p-8">
+                    <component
+                      :is="getComponentByType(element.type)"
+                      v-bind="element.props || getDefaultProps(element.type)"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+              </template>
+            </draggable>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel de configurações -->
+      <div v-if="drawerOpen" class="fixed inset-0 z-[50] overflow-hidden">
+        <!-- Overlay para fechar o painel ao clicar fora -->
+        <div class="absolute inset-0 bg-black/50" @click="closeDrawer"></div>
+        
+        <!-- Painel de configuração -->
+        <div class="fixed top-0 right-0 bottom-0 w-[450px] max-w-full bg-white dark:bg-gray-800 shadow-xl flex flex-col h-screen z-[51]">
+          <!-- Cabeçalho do painel -->
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Configurações</h3>
+            <button 
+              type="button" 
+              @click="closeDrawer" 
+              class="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
+            >
+              <X class="h-5 w-5" />
+              <span class="sr-only">Fechar</span>
+            </button>
+          </div>
+          
+          <!-- Conteúdo do painel com scroll -->
+          <div class="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 relative">
+            <component-settings
+              v-if="selectedComponent"
+              :component="selectedComponent"
+              @update="updateComponentSettings"
+              class="relative z-[52]"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+  
+  <script setup>
+  import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+  import draggable from 'vuedraggable/src/vuedraggable'
+  import { 
+    Pencil, 
+    Trash, 
+    FileText, 
+    Image, 
+    Menu, 
+    Columns, 
+    ClipboardList, 
+    Phone,
+    Eye,
+    FileDown,
+    ArrowUp,
+    ArrowDown,
+    Copy,
+    X,
+    FilePlus,
+    Gift,
+    Calculator,
+    Users,
+    Mail,
+    Calendar,
+    Clock
+  } from 'lucide-vue-next'
+  import { v4 as uuidv4 } from 'uuid'
+  import ComponentSettings from './ComponentSettings.vue'
+  import HeaderBlock from './Blocks/HeaderBlock.vue'
+  import ContentBlock from './Blocks/ContentBlock.vue'
+  import GalleryBlock from './Blocks/GalleryBlock.vue'
+  import CardBlock from './Blocks/CardBlock.vue'
+  import FormBlock from './Blocks/FormBlock.vue'
+  import ContactBlock from './Blocks/ContactBlock.vue'
+  import BenefitsBlock from './Blocks/BenefitsBlock.vue'
+  import SimulatorBlock from './Blocks/SimulatorBlock.vue'
+  import ContactChannelsBlock from './Blocks/ContactChannelsBlock.vue'
+  
+  // Props
+  const props = defineProps({
+      modelValue: {
+          type: Array,
+          default: () => []
+      },
+      globalStylesValue: {
+          type: Object,
+          default: () => ({
+              theme: 'light',
+              spacing: 'normal',
+              contentWidth: 'contained'
+          })
+      }
+  })
+  
+  // Emits
+  const emit = defineEmits(['update:modelValue', 'update:globalStylesValue'])
+  
+  // Estado da página
+  const pageComponents = ref(JSON.parse(JSON.stringify(props.modelValue || [])))
+  const selectedComponent = ref(null)
+  const drawerOpen = ref(false)
+  const globalStyles = ref(JSON.parse(JSON.stringify(props.globalStylesValue || {
+      theme: 'light',
+      spacing: 'normal',
+      contentWidth: 'contained'
+  })))
+  
+  // Função para comparar objetos profundamente
+  const isEqual = (obj1, obj2) => {
+      return JSON.stringify(obj1) === JSON.stringify(obj2)
+  }
+  
+  // Observa mudanças nos componentes
+  watch(pageComponents, (newValue) => {
+      console.log('PageBuilder - Componentes alterados:', newValue);
+      if (!isEqual(newValue, props.modelValue)) {
+          emit('update:modelValue', JSON.parse(JSON.stringify(newValue)));
+      }
+  }, { deep: true })
+  
+  // Observa mudanças nos estilos globais
+  watch(globalStyles, (newValue) => {
+      console.log('PageBuilder - Estilos globais alterados:', newValue);
+      // Força a emissão imediata dos novos valores
+      emit('update:globalStylesValue', JSON.parse(JSON.stringify(newValue)));
+      // Força uma atualização dos componentes também para garantir re-renderização
+      emit('update:modelValue', JSON.parse(JSON.stringify(pageComponents.value)));
+  }, { deep: true, immediate: true })
+  
+  // Observa mudanças nas props
+  watch(() => props.modelValue, (newValue) => {
+      console.log('PageBuilder - Props modelValue alterado:', newValue);
+      if (!isEqual(newValue, pageComponents.value)) {
+          pageComponents.value = JSON.parse(JSON.stringify(newValue || []));
+      }
+  }, { immediate: true })
+  
+  watch(() => props.globalStylesValue, (newValue) => {
+      console.log('PageBuilder - Props globalStylesValue alterado:', newValue);
+      if (!isEqual(newValue, globalStyles.value)) {
+          globalStyles.value = JSON.parse(JSON.stringify(newValue || {
+              theme: 'light',
+              spacing: 'normal',
+              contentWidth: 'contained'
+          }));
+      }
+  }, { immediate: true })
+  
+  // Adiciona evento de teclado para fechar o drawer com ESC
+  onMounted(() => {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawerOpen.value) {
+        closeDrawer()
+      }
+    })
+  })
+  
+  onUnmounted(() => {
+    window.removeEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawerOpen.value) {
+        closeDrawer()
+      }
+    })
+  })
+  
+  // Componentes disponíveis
+  const availableComponents = ref([
+    {
+      type: 'header',
+      title: 'Cabeçalho',
+      icon: Menu,
+      defaultProps: {
+        title: 'Novo Cabeçalho',
+        subtitle: 'Subtítulo opcional',
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        marginY: '0',
+        marginX: '0',
+        spacing: 'normal',
+        // Título
+        titleSize: '4xl',
+        titleWeight: 'bold',
+        titleColor: 'gray-900',
+        titleFont: 'font-sans',
+        // Subtítulo
+        subtitleSize: 'xl',
+        subtitleWeight: 'normal',
+        subtitleColor: 'gray-600',
+        subtitleFont: 'font-sans',
+        // Botões de ação
+        actions: []
+      }
+    },
+    {
+      type: 'content',
+      title: 'Conteúdo',
+      icon: FileText,
+      defaultProps: {
+        content: '',
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        marginY: '0',
+        marginX: '0',
+        spacing: 'normal',
+        // Texto
+        textSize: 'base',
+        textColor: 'gray-900',
+        textFont: 'font-sans',
+        style: 'default',
+        layout: 'default'
+      }
+    },
+    {
+      type: 'benefits',
+      title: 'Cards de Benefícios',
+      icon: Gift,
+      defaultProps: {
+        items: [
+          {
+            icon: 'Clock',
+            title: 'Título do Benefício',
+            description: 'Descrição do benefício',
+            link: {
+              text: 'Ver mais',
+              url: '#'
+            }
+          }
+        ],
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        marginY: '0',
+        marginX: '0',
+        spacing: 'normal',
+        // Cards
+        cardBackgroundColor: 'white',
+        cardShadow: 'sm',
+        cardBorderRadius: 'lg',
+        // Título dos Cards
+        cardTitleSize: 'xl',
+        cardTitleWeight: 'bold',
+        cardTitleColor: 'gray-900',
+        cardTitleFont: 'font-sans',
+        // Descrição dos Cards
+        cardDescriptionSize: 'base',
+        cardDescriptionColor: 'gray-600',
+        cardDescriptionFont: 'font-sans',
+        // Layout
+        layout: 'grid',
+        columns: 3,
+        style: 'default',
+        spacingVertical: 'default',
+        spacingHorizontal: 'default'
+      }
+    },
+    {
+      type: 'simulator',
+      title: 'Simulador',
+      icon: Calculator,
+      defaultProps: {
+        title: 'Simulador de Benefícios',
+        description: 'Faça uma simulação do seu benefício previdenciário.',
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        // Título
+        titleSize: '3xl',
+        titleWeight: 'bold',
+        titleColor: 'gray-900',
+        titleFont: 'font-sans',
+        // Descrição
+        descriptionSize: 'lg',
+        descriptionColor: 'gray-600',
+        descriptionFont: 'font-sans',
+        // Formulário
+        formBackgroundColor: 'gray-50',
+        formBorderRadius: 'lg',
+        formPadding: '6',
+        // Campos
+        fields: [
+          {
+            type: 'select',
+            name: 'benefitType',
+            label: 'Tipo de Benefício',
+            options: []
+          },
+          {
+            type: 'date',
+            name: 'birthDate',
+            label: 'Data de Nascimento'
+          },
+          {
+            type: 'number',
+            name: 'contributionTime',
+            label: 'Tempo de Contribuição (anos)'
+          },
+          {
+            type: 'currency',
+            name: 'lastSalary',
+            label: 'Última Remuneração'
+          }
+        ],
+        submitText: 'Calcular'
+      }
+    },
+    {
+      type: 'contact-channels',
+      title: 'Canais de Atendimento',
+      icon: Phone,
+      defaultProps: {
+        title: 'Canais de Atendimento',
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        // Título Principal
+        titleSize: '3xl',
+        titleWeight: 'bold',
+        titleColor: 'gray-900',
+        titleFont: 'font-sans',
+        // Cards
+        cardBackgroundColor: 'white',
+        cardShadow: 'sm',
+        cardBorderRadius: 'lg',
+        cardPadding: '6',
+        // Título dos Cards
+        cardTitleSize: 'xl',
+        cardTitleWeight: 'bold',
+        cardTitleColor: 'gray-900',
+        cardTitleFont: 'font-sans',
+        // Descrição dos Cards
+        cardDescriptionSize: 'base',
+        cardDescriptionColor: 'gray-600',
+        cardDescriptionFont: 'font-sans',
+        channels: [
+          {
+            icon: 'Users',
+            title: 'Atendimento Presencial',
+            description: 'Atendimento personalizado na sede do Instituto',
+            details: [
+              { type: 'address', value: 'Rua Principal, 123 - Centro' },
+              { type: 'schedule', value: 'Segunda a Sexta, 8h às 17h' }
+            ]
+          },
+          {
+            icon: 'Mail',
+            title: 'Atendimento Online',
+            description: 'Tire suas dúvidas por e-mail ou portal',
+            details: [
+              { type: 'email', value: 'atendimento@exemplo.gov.br' },
+              { type: 'time', value: '24 horas por dia' }
+            ]
+          },
+          {
+            icon: 'Phone',
+            title: 'Central de Atendimento',
+            description: 'Atendimento por telefone',
+            details: [
+              { type: 'phone', value: '(67) 3239-1500' },
+              { type: 'schedule', value: 'Segunda a Sexta, 8h às 18h' }
+            ]
+          }
+        ],
+        layout: 'grid',
+        columns: 3,
+        style: 'cards'
+      }
+    },
+    {
+      type: 'cards',
+      title: 'Cards',
+      icon: Columns,
+      defaultProps: {
+        // Título
+        title: 'Novo Card',
+        titleSize: '3xl',
+        titleWeight: 'bold',
+        titleColor: 'gray-900',
+        titleFont: 'font-sans',
+        // Subtítulo
+        subtitle: 'Subtítulo opcional',
+        subtitleSize: 'xl',
+        subtitleWeight: 'normal',
+        subtitleColor: 'gray-600',
+        subtitleFont: 'font-sans',
+        // Cards
+        cards: [
+          {
+            title: 'Primeiro Card',
+            description: 'Descrição do card',
+            icon: 'document',
+            link: {
+              text: 'Ver mais',
+              url: '#'
+            }
+          }
+        ],
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        // Layout
+        columns: 3,
+        style: 'default',
+        layout: 'default',
+        // Espaçamento entre cards
+        spacing: 'normal' // compact, normal, relaxed
+      }
+    },
+    {
+      type: 'form',
+      title: 'Formulário',
+      icon: ClipboardList,
+      defaultProps: {
+        title: '',
+        description: '',
+        // Container
+        containerWidth: 'default',
+        textAlignment: 'left',
+        // Background
+        backgroundColor: 'white',
+        backgroundImage: '',
+        overlayOpacity: 0,
+        // Bordas e Sombras
+        shadow: 'none',
+        borderStyle: 'none',
+        borderWidth: '0',
+        borderColor: 'gray-200',
+        borderRadius: 'none',
+        // Espaçamento
+        paddingY: '12',
+        paddingX: '4',
+        // Título
+        titleSize: '3xl',
+        titleWeight: 'bold',
+        titleColor: 'gray-900',
+        titleFont: 'font-sans',
+        // Descrição
+        descriptionSize: 'lg',
+        descriptionColor: 'gray-600',
+        descriptionFont: 'font-sans',
+        // Formulário
+        formBackgroundColor: 'gray-50',
+        formBorderRadius: 'lg',
+        formPadding: '6',
+        // Campos
+        fields: [],
+        submitText: 'Enviar',
+        style: 'default',
+        layout: 'default'
+      }
+    }
+  ])
+  
+  // Métodos
+  const cloneComponent = (component) => {
+      console.log('PageBuilder - Clonando componente:', component);
+      
+      // Cria uma cópia profunda dos defaultProps
+      const props = JSON.parse(JSON.stringify(component.defaultProps));
+      
+      // Garante que as propriedades básicas existam
+      props.style = props.style || 'default';
+      props.layout = props.layout || 'default';
+      props.spacingVertical = props.spacingVertical || 'default';
+      props.spacingHorizontal = props.spacingHorizontal || 'default';
+      
+      // Retorna um novo componente com os props mapeados
+      const newComponent = {
+          id: uuidv4(),
+          type: component.type,
+          props: props
+      };
+      
+      console.log('PageBuilder - Novo componente criado:', newComponent);
+      return newComponent;
+  }
+  
+  const handleComponentChange = (event) => {
+      console.log('PageBuilder - Evento de mudança:', event);
+      if (event.added) {
+          console.log('PageBuilder - Componente adicionado:', event.added.element);
+          // Garante que o componente adicionado tenha todas as propriedades necessárias
+          const addedComponent = event.added.element;
+          if (!addedComponent.props) {
+              addedComponent.props = {};
+          }
+          if (!addedComponent.id) {
+              addedComponent.id = uuidv4();
+          }
+      }
+      if (event.removed) {
+          console.log('PageBuilder - Componente removido:', event.removed.element);
+      }
+      if (event.moved) {
+          console.log('PageBuilder - Componente movido:', event.moved.element);
+      }
+      
+      // Força a atualização do v-model
+      emit('update:modelValue', JSON.parse(JSON.stringify(pageComponents.value)));
+  }
+  
+  const editComponent = (component) => {
+    console.log('Editando componente:', component)
+    selectedComponent.value = component
+    drawerOpen.value = true
+    
+    // Força a atualização do DOM para garantir que o Drawer seja exibido corretamente
+    nextTick(() => {
+      document.body.classList.add('overflow-hidden')
+    })
+  }
+  
+  const closeDrawer = () => {
+    drawerOpen.value = false
+    selectedComponent.value = null
+    
+    // Remove a classe overflow-hidden do body quando o Drawer é fechado
+    nextTick(() => {
+      document.body.classList.remove('overflow-hidden')
+    })
+  }
+  
+  const removeComponent = (component) => {
+    const index = pageComponents.value.findIndex(c => c.id === component.id)
+    if (index !== -1) {
+      pageComponents.value.splice(index, 1)
+    }
+  }
+  
+  const duplicateComponent = (component) => {
+    // Cria uma cópia profunda dos props
+    const props = JSON.parse(JSON.stringify(component.props))
+    
+    // Garante que style e layout sejam strings
+    props.style = typeof props.style === 'string' ? props.style : 'default'
+    props.layout = typeof props.layout === 'string' ? props.layout : 'default'
+    
+    const newComponent = {
+      id: uuidv4(),
+      type: component.type,
+      props: props
+    }
+    const index = pageComponents.value.findIndex(c => c.id === component.id)
+    pageComponents.value.splice(index + 1, 0, newComponent)
+  }
+  
+  const moveComponent = (component, direction) => {
+    const index = pageComponents.value.findIndex(c => c.id === component.id)
+    if (direction === 'up' && index > 0) {
+      const temp = pageComponents.value[index - 1]
+      pageComponents.value[index - 1] = component
+      pageComponents.value[index] = temp
+    } else if (direction === 'down' && index < pageComponents.value.length - 1) {
+      const temp = pageComponents.value[index + 1]
+      pageComponents.value[index + 1] = component
+      pageComponents.value[index] = temp
+    }
+  }
+  
+  const isFirstComponent = (component) => {
+    return pageComponents.value[0]?.id === component.id
+  }
+  
+  const isLastComponent = (component) => {
+    return pageComponents.value[pageComponents.value.length - 1]?.id === component.id
+  }
+  
+  const updateComponentSettings = (componentId, newSettings) => {
+    console.log('PageBuilder - Atualizando configurações do componente:', {
+      componentId,
+      newSettings
+    })
+    const component = pageComponents.value.find(c => c.id === componentId)
+    if (component) {
+      console.log('PageBuilder - Componente encontrado:', component)
+      component.props = { ...component.props, ...newSettings }
+      console.log('PageBuilder - Componente atualizado:', component)
+    }
+  }
+  
+  const savePageStructure = async () => {
+    try {
+      console.log('PageBuilder - Salvando estrutura da página')
+      
+      // Garante que os componentes e estilos globais estão definidos
+      const components = pageComponents.value || []
+      const styles = globalStyles.value || {
+        theme: 'light',
+        spacing: 'normal',
+        contentWidth: 'contained'
+      }
+      
+      // Emite evento para o componente pai com os componentes e estilos atualizados
+      console.log('PageBuilder - Emitindo componentes:', components)
+      emit('update:modelValue', components)
+      
+      console.log('PageBuilder - Emitindo estilos globais:', styles)
+      emit('update:globalStylesValue', styles)
+      
+      console.log('PageBuilder - Estrutura da página salva')
+    } catch (error) {
+      console.error('Erro ao atualizar a página:', error)
+    }
+  }
+  
+  const previewPage = () => {
+    // Implementar lógica de pré-visualização
+    console.log('Pré-visualizando página')
+  }
+  
+  // Computed
+  const getComponentByType = computed(() => (type) => {
+    const components = {
+      'header': HeaderBlock,
+      'content': ContentBlock,
+      'cards': CardBlock,
+      'form': FormBlock,
+      'benefits': BenefitsBlock,
+      'simulator': SimulatorBlock,
+      'contact-channels': ContactChannelsBlock
+    }
+    return components[type] || 'div'
+  })
+  
+  const getDefaultProps = (type) => {
+    const component = availableComponents.value.find(c => c.type === type)
+    return component ? component.defaultProps : {}
+  }
+  
+  // Configurações do draggable
+  const dragOptions = {
+    animation: 200,
+    group: {
+      name: "available",
+      pull: "clone",
+      put: false,
+      revertClone: true
+    },
+    sort: false,
+    disabled: false,
+    ghostClass: "ghost",
+    onStart: (evt) => {
+      console.log('Início do drag (source):', evt)
+    },
+    onEnd: (evt) => {
+      console.log('Fim do drag (source):', evt)
+    },
+    onClone: (evt) => {
+      console.log('Clone criado:', evt)
+    }
+  }
+  
+  const dropOptions = {
+    animation: 200,
+    group: {
+      name: "page",
+      put: ["available"]
+    },
+    sort: true,
+    disabled: false,
+    ghostClass: "ghost",
+    onAdd: (evt) => {
+      console.log('Componente adicionado ao drop:', evt)
+    },
+    onMove: (evt) => {
+      console.log('Movimento no drop:', evt)
+      return true
+    }
+  }
+  </script>
+  
+  <style scoped>
+  .page-builder {
+    @apply min-h-screen bg-white dark:bg-gray-800 w-full;
+  }
+  
+  .ghost {
+    @apply opacity-50 bg-blue-100 dark:bg-gray-800;
+  }
+  
+  /* Sobrescrevendo estilos do draggable */
+  :deep(.sortable-drag) {
+    @apply bg-white dark:bg-gray-800 !important;
+  }
+  
+  :deep(.sortable-ghost) {
+    @apply bg-white dark:bg-gray-800 opacity-50 !important;
+  }
+  
+  /* Ajuste da área principal */
+  .page-builder .flex-1 {
+    @apply transition-all duration-300;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Ajustes para os selects no painel de configuração */
+  :deep(select) {
+    z-index: 60 !important;
+    position: relative;
+  }
+
+  :deep(.select-dropdown) {
+    z-index: 60 !important;
+  }
+
+  :deep(.select-options) {
+    z-index: 60 !important;
+  }
+  </style> 
