@@ -3,151 +3,115 @@
   <div 
     :class="[
       'content-block relative',
-      `bg-${backgroundColor}`,
-      `shadow-${shadow}`,
-      `border-${borderStyle}`,
-      `border-${borderWidth}`,
-      `border-${borderColor}`,
-      `rounded-${borderRadius}`,
-      `py-${paddingY}`,
-      `px-${paddingX}`,
-      backgroundImage ? 'bg-cover bg-center' : '',
-      overlayOpacity ? 'relative' : '',
-      textAlignment === 'center' ? 'text-center' : '',
-      textAlignment === 'right' ? 'text-right' : '',
+      `bg-${props.backgroundColor}`,
+      `shadow-${props.shadow}`,
+      `border-${props.borderStyle}`,
+      `border-${props.borderWidth}`,
+      `border-${props.borderColor}`,
+      `rounded-${props.borderRadius}`,
+      `py-${props.paddingY}`,
+      `px-${props.paddingX}`,
+      props.backgroundImage ? 'bg-cover bg-center' : '',
+      props.overlayOpacity ? 'relative' : '',
+      props.textAlignment === 'center' ? 'text-center' : '',
+      props.textAlignment === 'right' ? 'text-right' : '',
     ]"
     :style="{
-      backgroundImage: backgroundImage ? `url(${backgroundImage})` : null,
+      backgroundImage: props.backgroundImage ? `url(${props.backgroundImage})` : null,
     }"
   >
     <!-- Overlay com opacidade -->
     <div 
-      v-if="overlayOpacity"
+      v-if="props.overlayOpacity"
       class="absolute inset-0 bg-black"
-      :style="{ opacity: overlayOpacity }"
+      :style="{ opacity: props.overlayOpacity }"
     ></div>
 
+    <!-- Container principal -->
     <div :class="[
       'relative z-10',
-      containerWidth === 'full' ? '' : 'container mx-auto',
-      containerWidth === 'narrow' ? 'max-w-4xl' : ''
+      props.containerWidth === 'full' ? '' : 'container mx-auto',
+      props.containerWidth === 'narrow' ? 'max-w-4xl' : ''
     ]">
-      <div class="prose dark:prose-invert max-w-none">
-        <div v-if="useMarkdown" v-html="renderedContent"></div>
-        <div v-else class="whitespace-pre-wrap">{{ displayContent }}</div>
-      </div>
+      <!-- Conteúdo dinâmico -->
+      <template v-if="props.dataSource === 'dynamic'">
+        <!-- Exibição de categorias -->
+        <template v-if="props.contentType === 'category' && props.selectedCategories?.length">
+          <CategoryLinks
+            :categories="categories"
+            :selected-category-ids="props.selectedCategories"
+            :title="props.title"
+            :layout="props.layout"
+            :columns="props.columns"
+            :style="props.style"
+            :theme="props.theme"
+          />
+        </template>
+
+        <!-- Exibição de posts -->
+        <template v-else-if="props.contentType === 'posts'">
+          <!-- Implementar exibição de posts aqui -->
+        </template>
+      </template>
+
+      <!-- Conteúdo estático -->
+      <template v-else>
+        <div class="prose dark:prose-invert max-w-none">
+          <div v-if="props.useMarkdown" v-html="renderedContent"></div>
+          <div v-else class="whitespace-pre-wrap">{{ displayContent }}</div>
+        </div>
+      </template>
     </div>
 
     <!-- Área para componentes aninhados -->
-    <div v-if="allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+    <div v-if="props.allowNesting" class="nested-components-container mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
       <slot></slot>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { marked } from 'marked'
+import axios from 'axios'
+import CategoryLinks from './CategoryLinks.vue'
 
 const props = defineProps({
-  content: {
-    type: String,
-    default: ''
-  },
-  useMarkdown: {
-    type: Boolean,
-    default: true
-  },
-  // Fonte de dados
-  dataSource: {
-    type: String,
-    default: 'static' // 'static', 'dynamic'
-  },
-  contentLink: {
-    type: Object,
-    default: null
-  },
-  // Opções de Container
-  containerWidth: {
-    type: String,
-    default: 'default' // 'default', 'full', 'narrow'
-  },
-  textAlignment: {
-    type: String,
-    default: 'left' // 'left', 'center', 'right'
-  },
-  // Background
-  backgroundColor: {
-    type: String,
-    default: 'white' // 'white', 'gray-50', 'gray-100', etc
-  },
-  backgroundImage: {
-    type: String,
-    default: ''
-  },
-  overlayOpacity: {
-    type: Number,
-    default: 0 // 0 a 1
-  },
-  // Bordas e Sombras
-  shadow: {
-    type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'xl'
-  },
-  borderStyle: {
-    type: String,
-    default: 'none' // 'none', 'solid', 'dashed', 'dotted'
-  },
-  borderWidth: {
-    type: String,
-    default: '0' // '0', '1', '2', '4', '8'
-  },
-  borderColor: {
-    type: String,
-    default: 'gray-200'
-  },
-  borderRadius: {
-    type: String,
-    default: 'none' // 'none', 'sm', 'md', 'lg', 'full'
-  },
-  // Espaçamento
-  paddingY: {
-    type: String,
-    default: '12' // '4', '8', '12', '16', '20'
-  },
-  paddingX: {
-    type: String,
-    default: '4' // '4', '8', '12', '16', '20'
-  },
-  // Novas propriedades para o sistema de colunas e aninhamento
-  columnSpan: {
-    type: [Number, String],
-    default: 12
-  },
-  allowNesting: {
-    type: Boolean,
-    default: false
-  },
-  // Novas propriedades para listagens dinâmicas
-  contentType: {
-    type: String,
-    default: 'single'
-  },
-  selectedCategories: {
-    type: Array,
-    default: () => []
-  },
-  filterCategory: {
-    type: [String, Number],
-    default: 'all'
-  },
-  postsLimit: {
-    type: [Number, String],
-    default: 6
-  }
+  content: { type: String, default: '' },
+  useMarkdown: { type: Boolean, default: true },
+  dataSource: { type: String, default: 'static' },
+  contentLink: { type: Object, default: null },
+  containerWidth: { type: String, default: 'default' },
+  textAlignment: { type: String, default: 'left' },
+  backgroundColor: { type: String, default: 'white' },
+  backgroundImage: { type: String, default: '' },
+  overlayOpacity: { type: Number, default: 0 },
+  shadow: { type: String, default: 'none' },
+  borderStyle: { type: String, default: 'none' },
+  borderWidth: { type: String, default: '0' },
+  borderColor: { type: String, default: 'gray-200' },
+  borderRadius: { type: String, default: 'none' },
+  paddingY: { type: String, default: '12' },
+  paddingX: { type: String, default: '4' },
+  columnSpan: { type: [Number, String], default: 12 },
+  allowNesting: { type: Boolean, default: false },
+  contentType: { type: String, default: 'single' },
+  selectedCategories: { type: Array, default: () => [] },
+  filterCategory: { type: [String, Number], default: 'all' },
+  postsLimit: { type: [Number, String], default: 6 },
+  title: { type: String, default: '' },
+  layout: { type: String, default: 'grid' },
+  columns: { type: Number, default: 3 },
+  style: { type: String, default: 'default' },
+  theme: { type: String, default: 'light' }
 })
 
-// Conteúdo dinâmico ou estático
+// Estado
+const categories = ref([])
+const posts = ref([])
+const isLoading = ref(false)
+
+// Computed
 const displayContent = computed(() => {
   if (props.dataSource === 'dynamic' && props.contentLink?.data) {
     return props.contentLink.data.description || ''
@@ -160,10 +124,33 @@ const renderedContent = computed(() => {
   if (!contentToRender) return ''
   return marked(contentToRender)
 })
+
+// Métodos
+const loadCategories = async () => {
+  try {
+    isLoading.value = true
+    const response = await axios.get('/api/page-builder/categories')
+    categories.value = response.data.data
+  } catch (error) {
+    console.error('Erro ao carregar categorias:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  if (props.contentType === 'category' && props.selectedCategories?.length) {
+    await loadCategories()
+  }
+})
 </script>
 
 <style scoped>
-/* Estilos da prosa */
+.content-block {
+  @apply w-full;
+}
+
 :deep(.prose) {
   @apply max-w-none;
 }
@@ -222,9 +209,5 @@ const renderedContent = computed(() => {
 
 :deep(.prose td) {
   @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100;
-}
-
-.content-block {
-  @apply w-full;
 }
 </style> 

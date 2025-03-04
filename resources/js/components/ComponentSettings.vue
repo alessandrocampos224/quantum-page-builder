@@ -106,14 +106,17 @@
                 <div v-if="settings.contentType === 'category'">
                   <Label class="mb-1">Selecionar Categorias</Label>
                   <div class="space-y-2 mt-2">
-                    <div v-for="(category, index) in availableCategories" :key="index" class="flex items-center space-x-2">
+                    <div v-if="isLoading" class="flex items-center justify-center py-4">
+                      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                    </div>
+                    <div v-else v-for="category in availableCategories" :key="category.id" class="flex items-center space-x-2">
                       <Checkbox 
-                        :id="`category-${index}`" 
+                        :id="`category-${category.id}`" 
                         v-model="settings.selectedCategories" 
                         :value="category.id" 
                         :checked="settings.selectedCategories?.includes(category.id)"
                       />
-                      <Label :for="`category-${index}`">{{ category.name }}</Label>
+                      <Label :for="`category-${category.id}`">{{ category.name }}</Label>
                     </div>
                   </div>
                 </div>
@@ -127,7 +130,7 @@
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todas as categorias</SelectItem>
-                        <SelectItem v-for="(category, index) in availableCategories" :key="index" :value="category.id">
+                        <SelectItem v-for="category in availableCategories" :key="category.id" :value="category.id">
                           {{ category.name }}
                         </SelectItem>
                       </SelectContent>
@@ -136,6 +139,9 @@
                   <div class="mt-3">
                     <Label class="mb-1">Número de Posts</Label>
                     <Input v-model="settings.postsLimit" type="number" min="1" max="20" />
+                  </div>
+                  <div v-if="isLoading" class="flex items-center justify-center py-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
                   </div>
                 </div>
               </div>
@@ -1064,7 +1070,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { Trash, Plus } from 'lucide-vue-next'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -1074,7 +1080,14 @@ import { Button } from './ui/button'
 import { Slider } from './ui/slider'
 import { Checkbox } from './ui/checkbox'
 import ContentSelector from './ContentSelector.vue'
+import axios from 'axios'
 
+// Estado
+const availableCategories = ref([])
+const availablePosts = ref([])
+const isLoading = ref(false)
+
+// Props
 const props = defineProps({
   component: {
     type: Object,
@@ -1087,16 +1100,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update'])
-
-// Adicionar propriedades para o sistema de colunas e aninhamento
-const columnSettings = {
-  columnSpan: 6,
-  allowNesting: false,
-  contentType: 'single',
-  selectedCategories: [],
-  filterCategory: 'all',
-  postsLimit: 6
-}
 
 // Inicializa as configurações com valores padrão baseados no tipo do componente
 const initializeSettings = () => {
@@ -1117,7 +1120,12 @@ const initializeSettings = () => {
     style: 'default',
     dataSource: 'static',
     contentLink: null,
-    ...columnSettings
+    columnSpan: 6,
+    allowNesting: false,
+    contentType: 'single',
+    selectedCategories: [],
+    filterCategory: 'all',
+    postsLimit: 6
   }
 
   if (props.component?.type === 'header') {
@@ -1197,23 +1205,56 @@ const initializeSettings = () => {
 }
 
 // Inicializa as configurações com os valores do componente ou valores padrão
-const settings = reactive({
-  ...initializeSettings(),
-  ...(props.component?.props || {})
+const settings = reactive(initializeSettings())
+
+// Função para carregar categorias
+const loadCategories = async () => {
+  try {
+    isLoading.value = true
+    const response = await axios.get('/api/page-builder/categories')
+    availableCategories.value = response.data.data
+  } catch (error) {
+    console.error('Erro ao carregar categorias:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Função para carregar posts
+const loadPosts = async (categoryId = null) => {
+  try {
+    isLoading.value = true
+    const url = categoryId 
+      ? `/api/page-builder/categories/${categoryId}/posts`
+      : '/api/page-builder/posts'
+    const response = await axios.get(url)
+    availablePosts.value = response.data.data
+  } catch (error) {
+    console.error('Erro ao carregar posts:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Observar mudanças na categoria selecionada para filtrar posts
+watch(() => settings.filterCategory, async (newValue) => {
+  if (newValue && newValue !== 'all') {
+    await loadPosts(newValue)
+  } else {
+    await loadPosts()
+  }
 })
 
-// Categorias disponíveis (simulação - deve ser carregado da API)
-const availableCategories = ref([
-  { id: 1, name: 'Audiência Pública' },
-  { id: 2, name: 'Prova de Vida' },
-  { id: 3, name: 'Auditoria' },
-  { id: 4, name: 'Certificação' },
-  { id: 5, name: 'Notícias' },
-  { id: 6, name: 'Convivência' },
-  { id: 7, name: 'Serviços' },
-  { id: 8, name: 'Formação' },
-  { id: 9, name: 'Informativo' }
-])
+// Carregar dados iniciais
+onMounted(async () => {
+  // Mesclar as configurações existentes com as novas
+  Object.assign(settings, props.component?.props || {})
+  
+  await loadCategories()
+  if (settings.contentType === 'posts') {
+    await loadPosts(settings.filterCategory !== 'all' ? settings.filterCategory : null)
+  }
+})
 
 // Métodos para gerenciar botões de ação
 const addAction = () => {
